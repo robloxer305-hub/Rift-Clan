@@ -125,9 +125,9 @@ export default async function ProfilePage() {
                       <Image
                         src={avatarDecorationUrl}
                         alt="Avatar decoration"
-                        width={136}
-                        height={136}
-                        className="pointer-events-none absolute -inset-2 z-10"
+                        width={128}
+                        height={128}
+                        className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
                         unoptimized
                       />
                     )}
