@@ -37,6 +37,9 @@ export const metadata: Metadata = {
   description:
     "RIFT is a competitive gaming community where players fight for their position, defend their rank, and climb to the top across Valorant, Roblox, Minecraft, Counter-Strike 2, and Brawlhalla.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  icons: {
+    icon: "/favicon.png",
+  },
   openGraph: {
     title: "RIFT CLAN — Compete. Challenge. Conquer.",
     description:
