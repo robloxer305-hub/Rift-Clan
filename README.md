@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # RIFT CLAN
 
 Competitive gaming clan platform — live leaderboards for Valorant, Roblox,
@@ -123,3 +124,6 @@ bot/
 Global design system components (navbar, footer, buttons, cards) and
 the real home page — hero, animated background, the "RIFT LEADERBOARDS"
 game cards, and the live top-3 podium — built on top of this scaffold.
+=======
+# Rift-Clan
+>>>>>>> 8aba547796b36e1b598821e993051f70648b96e8
