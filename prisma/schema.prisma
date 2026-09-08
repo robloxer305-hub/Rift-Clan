@@ -1,0 +1,333 @@
+// RIFT CLAN — database schema
+// Run `npm run db:push` (dev) or `npm run db:migrate` (creates a migration)
+// after editing this file. See README.md for setup.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // only needed on providers that pool DATABASE_URL (Neon, Supabase)
+}
+
+// ---------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------
+
+enum Role {
+  MEMBER
+  MODERATOR
+  ADMIN
+}
+
+enum EntryStatus {
+  ACTIVE // holding their position normally
+  DEFENDING // has an active incoming challenge
+  NEW // just entered the leaderboard
+  INACTIVE // removed from ranked play but history preserved
+}
+
+enum ChallengeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum SyncStatus {
+  LIVE
+  SYNCING
+  ERROR
+}
+
+// ---------------------------------------------------------------------
+// Identity — User plus Auth.js's required Account/Session models.
+// Discord OAuth is the only provider, so a user's Discord identity
+// (avatar, username) is denormalized onto User for fast reads, while
+// Account holds the OAuth tokens Auth.js needs to manage the session.
+// ---------------------------------------------------------------------
+
+model User {
+  id                 String   @id @default(cuid())
+  discordId          String   @unique
+  username           String
+  globalName         String?
+  avatar             String?
+  avatarDecoration   String?
+  banner             String?
+  profileBackground  String?
+  profileBanner      String?
+  clanTag            String?
+  role               Role     @default(MEMBER)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+
+  leaderboardEntries    LeaderboardEntry[]
+  rankHistory           RankHistory[]
+  challengesInitiated   Challenge[]             @relation("ChallengeInitiator")
+  challengeParticipants ChallengeParticipant[]
+  adminActions          AdminAction[]
+
+  @@index([discordId])
+  @@map("users")
+}
+
+model RiftProfile {
+  id        String    @id @default(cuid())
+  guildId   String
+  userId    String
+  username  String
+  balance   Int       @default(150)
+  xp        Int       @default(0)
+  level     Int       @default(1)
+  lastDaily DateTime?
+  inventory String[]  @default([])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, balance])
+  @@map("rift_profiles")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------
+// Games & leaderboards
+// ---------------------------------------------------------------------
+
+model Game {
+  id          String   @id @default(cuid())
+  slug        String   @unique // "valorant", "roblox", "minecraft", "cs2", "brawlhalla"
+  name        String
+  description String?
+  imageUrl    String?
+  themeColor  String? // hex accent used on that game's leaderboard page
+  channelId   String? // Discord channel this game's leaderboard is parsed from
+  createdAt   DateTime @default(now())
+
+  leaderboardEntries   LeaderboardEntry[]
+  leaderboardSnapshots LeaderboardSnapshot[]
+  rankHistory          RankHistory[]
+  challenges           Challenge[]
+  discordMessages      DiscordMessage[]
+  syncLogs             SyncLog[]
+
+  @@map("games")
+}
+
+// The current, live standing for one player in one game.
+// previousRank + status are what let the UI show "↑ 2 ranks" / "NEW" / etc.
+model LeaderboardEntry {
+  id           String      @id @default(cuid())
+  gameId       String
+  userId       String
+  rank         Int
+  previousRank Int?
+  status       EntryStatus @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([gameId, userId])
+  @@unique([gameId, rank])
+  @@index([gameId, rank])
+  @@map("leaderboard_entries")
+}
+
+// A full point-in-time copy of a game's ranked list. Written every time
+// a Discord leaderboard message is (re)parsed, so "what did the board
+// look like last Tuesday" is answerable without replaying RankHistory.
+model LeaderboardSnapshot {
+  id                     String   @id @default(cuid())
+  gameId                 String
+  data                   Json // ordered [{ userId, rank, discordId }, ...]
+  sourceDiscordMessageId String?
+  createdAt              DateTime @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, createdAt])
+  @@map("leaderboard_snapshots")
+}
+
+// One row per rank change, ever. This is what powers a player's
+// rank-progression graph and the "#5 → #3, defeated PlayerName" feed.
+model RankHistory {
+  id                String   @id @default(cuid())
+  userId            String
+  gameId            String
+  previousRank      Int?
+  newRank           Int
+  reason            String // e.g. "Defeated PlayerName", "Won challenge", "Discord sync"
+  discordMessageId  String?
+  challengeId       String?
+  createdAt         DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game      Game       @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  challenge Challenge? @relation(fields: [challengeId], references: [id])
+
+  @@index([userId, gameId])
+  @@index([gameId, createdAt])
+  @@map("rank_history")
+}
+
+// ---------------------------------------------------------------------
+// Challenges
+// ---------------------------------------------------------------------
+
+model Challenge {
+  id             String          @id @default(cuid())
+  gameId         String
+  initiatorId    String
+  status         ChallengeStatus @default(PENDING)
+  challengerRank Int
+  defenderRank   Int
+  winnerId       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  expiresAt      DateTime?
+
+  game         Game                    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  initiator    User                    @relation("ChallengeInitiator", fields: [initiatorId], references: [id])
+  participants ChallengeParticipant[]
+  matchResult  MatchResult?
+  rankHistory  RankHistory[]
+
+  @@index([gameId, status])
+  @@map("challenges")
+}
+
+// Join table so a Challenge can carry exactly one challenger + one
+// defender while staying queryable from either side ("my challenges").
+model ChallengeParticipant {
+  id          String  @id @default(cuid())
+  challengeId String
+  userId      String
+  isDefender  Boolean @default(false)
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@map("challenge_participants")
+}
+
+model MatchResult {
+  id           String   @id @default(cuid())
+  challengeId  String   @unique
+  winnerId     String
+  loserId      String
+  reportedById String
+  approved     Boolean  @default(false) // admin approval before rank changes apply
+  notes        String?
+  createdAt    DateTime @default(now())
+
+  challenge Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@map("match_results")
+}
+
+// ---------------------------------------------------------------------
+// Discord sync
+// ---------------------------------------------------------------------
+
+// One row per Discord leaderboard message, keyed on discordMessageId.
+// On messageUpdate the bot updates this row in place (content + editedAt) —
+// it is *not* an edit log. The historical trail of what each edit produced
+// lives in LeaderboardSnapshot (one new snapshot per successful parse), so
+// "what did the board look like after edit #2" is answered from there.
+// `processingError` lets a failed parse surface to admins without ever
+// touching the live LeaderboardEntry rows.
+model DiscordMessage {
+  id               String    @id @default(cuid())
+  discordMessageId String    @unique
+  channelId        String
+  gameId           String
+  authorDiscordId  String
+  content          String    @db.Text
+  messageUrl       String
+  editedAt         DateTime?
+  processedAt      DateTime?
+  processingError  String?
+  createdAt        DateTime  @default(now())
+
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@index([gameId, createdAt])
+  @@map("discord_messages")
+}
+
+model SyncLog {
+  id        String     @id @default(cuid())
+  gameId    String?
+  status    SyncStatus
+  message   String
+  createdAt DateTime   @default(now())
+
+  game Game? @relation(fields: [gameId], references: [id])
+
+  @@index([gameId, createdAt])
+  @@map("sync_logs")
+}
+
+// ---------------------------------------------------------------------
+// Admin audit trail
+// ---------------------------------------------------------------------
+
+model AdminAction {
+  id             String   @id @default(cuid())
+  adminId        String
+  action         String // e.g. "EDIT_RANK", "REMOVE_ENTRY", "APPROVE_MATCH"
+  affectedUserId String?
+  gameId         String?
+  previousValue  Json?
+  newValue       Json?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@index([adminId, createdAt])
+  @@map("admin_actions")
+}

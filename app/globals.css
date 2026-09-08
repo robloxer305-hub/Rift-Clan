@@ -1,0 +1,259 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  RIFT is dark-only by design — there is no light theme toggle.
+  These are shadcn/ui's standard semantic variable names so that
+  `npx shadcn add <component>` continues to work untouched; the
+  values themselves are derived from the RIFT brand palette:
+
+    background   #0A0A0B   near-black page background
+    card         #131316   deep charcoal panel
+    secondary    #1C1C20   elevated panel / hover surface
+    border       #26262B   soft hairline border
+    primary      #E31C3D   RIFT red (brand accent, from the logo)
+    destructive  pure red  reserved for errors, distinct from brand red
+    foreground   #F2F2F4   soft (not pure) white text
+    muted-fg     #8B8B94   secondary/meta text
+*/
+
+@layer base {
+  :root {
+    --background: 240 5% 4%;
+    --foreground: 240 10% 96%;
+
+    --card: 240 7% 8%;
+    --card-foreground: 240 10% 96%;
+
+    --popover: 240 7% 8%;
+    --popover-foreground: 240 10% 96%;
+
+    --primary: 350 78% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 7% 12%;
+    --secondary-foreground: 240 10% 96%;
+
+    --muted: 240 7% 12%;
+    --muted-foreground: 240 5% 58%;
+
+    --accent: 240 7% 14%;
+    --accent-foreground: 240 10% 96%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 6% 16%;
+    --input: 240 6% 16%;
+    --ring: 350 78% 50%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image: radial-gradient(circle at 50% -10%, rgba(227, 28, 61, 0.10), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background-color: rgba(227, 28, 61, 0.35);
+    color: hsl(var(--foreground));
+  }
+
+  /* Visible keyboard focus everywhere — never suppressed */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Slim, low-contrast scrollbar to match the dashboard feel */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 999px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* ------------------------------------------------------------------ */
+  /* Glass panel — cards, nav, modals                                    */
+  /* ------------------------------------------------------------------ */
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-border/60;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .glass-panel::before,
+  .game-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    opacity: 0.12;
+    background-image:
+      linear-gradient(135deg, rgba(10, 10, 11, 0.8), rgba(10, 10, 11, 0.35)),
+      url("https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: saturate(0.9) contrast(1.1) brightness(0.75);
+    pointer-events: none;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Eyebrow / section kicker label                                      */
+  /* ------------------------------------------------------------------ */
+  .rift-eyebrow {
+    @apply font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Ambient page glow — fixed layer behind all content                  */
+  /* ------------------------------------------------------------------ */
+  .bg-rift-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .bg-rift-glow::before,
+  .bg-rift-glow::after {
+    content: "";
+    position: absolute;
+    inset: -20% -30% -20% -30%;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(227, 28, 61, 0.14), transparent 12%),
+      radial-gradient(circle at 80% 80%, rgba(58, 123, 213, 0.08), transparent 18%);
+    z-index: 0;
+    animation: rift-drift 18s linear infinite;
+    opacity: 0.9;
+    pointer-events: none;
+  }
+
+  .bg-rift-glow::after {
+    animation-duration: 26s;
+    transform: rotate(30deg);
+    opacity: 0.7;
+  }
+
+  @keyframes rift-drift {
+    0%   { transform: translateY(0) scale(1); }
+    50%  { transform: translateY(-6%) scale(1.05); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Game grid                                                           */
+  /* ------------------------------------------------------------------ */
+  .game-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .game-card {
+    @apply glass-panel overflow-hidden rounded-lg p-4 text-left transition-all duration-200;
+    @apply hover:-translate-y-1 hover:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)];
+    min-height: 210px;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .game-card::before {
+    opacity: 0.08;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Navbar                                                              */
+  /* ------------------------------------------------------------------ */
+  .nav-bar {
+    @apply glass-panel flex items-center justify-between gap-4 px-6 py-3 rounded-xl;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Buttons                                                             */
+  /* ------------------------------------------------------------------ */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-rift-red px-4 py-2 text-sm font-semibold text-white
+           transition-all duration-150 hover:bg-rift-red-glow hover:shadow-[0_0_20px_-4px_rgba(227,28,61,0.6)]
+           active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rift-red;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-sm text-muted-foreground
+           transition-colors duration-150 hover:border-border/80 hover:text-foreground
+           active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rift-red;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Rank badges — gold / silver / bronze                                */
+  /* ------------------------------------------------------------------ */
+  .rank-badge-gold {
+    @apply font-mono text-sm font-bold text-amber-400;
+    text-shadow: 0 0 12px rgba(251, 191, 36, 0.6);
+  }
+  .rank-badge-silver {
+    @apply font-mono text-sm font-bold text-zinc-400;
+  }
+  .rank-badge-bronze {
+    @apply font-mono text-sm font-bold text-amber-700;
+  }
+  .rank-badge-default {
+    @apply font-mono text-sm text-muted-foreground;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Live indicator dot                                                  */
+  /* ------------------------------------------------------------------ */
+  .live-dot {
+    @apply inline-block h-1.5 w-1.5 rounded-full bg-rift-red;
+    animation: live-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.5; transform: scale(0.75); }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Stats divider row                                                   */
+  /* ------------------------------------------------------------------ */
+  .stats-bar {
+    @apply glass-panel flex flex-wrap items-center justify-around gap-6 rounded-xl px-8 py-5;
+  }
+
+  .stats-divider {
+    @apply hidden h-8 w-px bg-border/60 sm:block;
+  }
+}
