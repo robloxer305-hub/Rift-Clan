@@ -30,7 +30,11 @@ export default function ProfileAppearanceForm({
               </div>
               <button type="button" onClick={() => setOpen(false)} className="btn-ghost px-2 py-1" aria-label="Close customization dialog">Close</button>
             </div>
-            <form action={updateProfileAppearance} onSubmit={() => setOpen(false)} className="grid gap-4">
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              await updateProfileAppearance(new FormData(e.target));
+              setOpen(false);
+            }} className="grid gap-4">
               <ImageField name="profileBackground" label="Profile background" value={profileBackground} />
               <ImageField name="profileBanner" label="Profile banner" value={profileBanner} />
               <div className="flex justify-end gap-2 pt-2">
