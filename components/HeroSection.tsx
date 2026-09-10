@@ -33,15 +33,24 @@ export default function HeroSection() {
         className="mt-4 font-display text-[clamp(3.5rem,9vw,7rem)] font-extrabold uppercase leading-[0.9] tracking-tight text-foreground"
       >
         RIFT{" "}
-        <span className="relative text-rift-red">
+        <span className="relative inline-block text-rift-red">
           CLAN
-          {/* subtle text glow */}
+          {/* Glow blur */}
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0 blur-2xl opacity-40 text-rift-red-glow select-none"
+            className="pointer-events-none absolute inset-0 select-none blur-3xl opacity-50 text-rift-red"
           >
             CLAN
           </span>
+          {/* Animated underline */}
+          <motion.span
+            aria-hidden
+            className="absolute bottom-0 left-0 h-[3px] rounded-full bg-gradient-to-r from-rift-red via-rift-red-glow to-transparent"
+            initial={{ scaleX: 0, originX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.55, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            style={{ width: "100%" }}
+          />
         </span>
       </motion.h1>
 
@@ -51,19 +60,42 @@ export default function HeroSection() {
         className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground"
       >
         Compete. Challenge. Conquer. Climb the ranks across{" "}
-        <span className="text-foreground/80">Valorant, CS2, Minecraft, Roblox,</span> and{" "}
-        <span className="text-foreground/80">Brawlhalla</span> — synced live from Discord.
+        <strong className="font-semibold text-foreground/90">Valorant, CS2, Minecraft, Roblox,</strong>{" "}
+        and{" "}
+        <strong className="font-semibold text-foreground/90">Brawlhalla</strong>{" "}
+        — synced live from Discord.
       </motion.p>
+
+      {/* Feature pills */}
+      <motion.div variants={item} className="mt-5 flex flex-wrap gap-2">
+        {["Real-time sync", "Discord-native", "Multi-game"].map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full border border-border/60 bg-secondary/50 px-3 py-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
+          >
+            {tag}
+          </span>
+        ))}
+      </motion.div>
 
       {/* CTAs */}
       <motion.div variants={item} className="mt-8 flex flex-wrap items-center gap-3">
         <Link
           href="/leaderboards"
           id="hero-view-leaderboards"
-          className="btn-primary group"
+          className="btn-primary group px-5 py-2.5 text-sm"
         >
           View Leaderboards
-          <span className="ml-1.5 transition-transform group-hover:translate-x-0.5">→</span>
+          <span className="ml-1.5 transition-transform group-hover:translate-x-1">→</span>
+        </Link>
+
+        <Link
+          href="/members"
+          id="hero-view-members"
+          className="btn-ghost group px-5 py-2.5 text-sm"
+        >
+          Meet the Clan
+          <span className="ml-1.5 opacity-60 transition-opacity group-hover:opacity-100">↓</span>
         </Link>
       </motion.div>
     </motion.div>
