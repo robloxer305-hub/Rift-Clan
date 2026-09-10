@@ -22,37 +22,73 @@ export default function GameCard({
   className,
 }: Props) {
   const gameImage = getGameImage(slug);
+  const accent = themeColor ?? "#E31C3D";
 
   return (
     <article
       style={
-        themeColor
-          ? ({ "--game-color": themeColor } as React.CSSProperties)
-          : undefined
+        {
+          "--game-color": accent,
+          "--game-glow": `${accent}55`,
+        } as React.CSSProperties
       }
-      className={cn("game-card group relative flex h-full flex-col", className)}
+      className={cn(
+        "game-card group relative flex h-full flex-col overflow-hidden",
+        "hover:shadow-[0_8px_40px_-8px_var(--game-glow)]",
+        "hover:border-[var(--game-color)]/40",
+        className
+      )}
     >
+      {/* Background image — fades in brighter on hover */}
       {gameImage && (
         <div
-          className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center opacity-35 transition-opacity duration-200 group-hover:opacity-50"
-          style={{ backgroundImage: `linear-gradient(135deg, rgba(10, 10, 11, 0.94), rgba(10, 10, 11, 0.38)), url(${gameImage})` }}
+          className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-300 group-hover:opacity-70"
+          style={{
+            backgroundImage: `url(${gameImage})`,
+            opacity: 0.22,
+          }}
           aria-hidden
         />
       )}
 
-      {/* Per-game accent line */}
+      {/* Dark gradient overlay — always present, strengthens content legibility */}
       <div
-        className="absolute left-0 top-0 h-full w-[3px] rounded-l-lg opacity-80 transition-opacity group-hover:opacity-100"
-        style={{ background: themeColor ?? "hsl(var(--rift-red))" }}
+        className="pointer-events-none absolute inset-0 z-[1]"
+        style={{
+          background: `linear-gradient(160deg, rgba(10,10,11,0.82) 0%, rgba(10,10,11,0.55) 50%, rgba(10,10,11,0.88) 100%)`,
+        }}
+        aria-hidden
       />
 
-      <div className="relative z-10 flex h-full flex-col pl-3">
+      {/* Bottom fade */}
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 right-0 z-[2] h-24"
+        style={{
+          background: `linear-gradient(to top, rgba(10,10,11,0.95), transparent)`,
+        }}
+        aria-hidden
+      />
+
+      {/* Per-game accent line */}
+      <div
+        className="absolute left-0 top-0 z-[3] h-full w-[3px] rounded-l-lg opacity-80 transition-all duration-200 group-hover:opacity-100 group-hover:w-[4px]"
+        style={{ background: `linear-gradient(180deg, ${accent}, ${accent}40)` }}
+      />
+
+      <div className="relative z-[4] flex h-full flex-col pl-3">
         {/* Header row */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-h-[3.25rem] flex-1 font-display text-lg font-bold uppercase tracking-wide leading-tight">
             {title}
           </h3>
-          <span className="shrink-0 rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          <span
+            className="shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]"
+            style={{
+              background: `${accent}18`,
+              color: accent,
+              border: `1px solid ${accent}30`,
+            }}
+          >
             {players} {players === 1 ? "player" : "players"}
           </span>
         </div>
@@ -65,7 +101,7 @@ export default function GameCard({
 
         {topPlayer && (
           <p className="mt-2 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-            <span className="text-amber-400">♛</span>
+            <span style={{ color: "#F59E0B" }}>♛</span>
             <span className="truncate">{topPlayer}</span>
           </p>
         )}
@@ -75,10 +111,11 @@ export default function GameCard({
           <Link
             href={`/leaderboards/${slug}`}
             id={`game-card-${slug}`}
-            className="text-xs font-semibold transition-colors"
-            style={{ color: themeColor ?? "hsl(var(--rift-red))" }}
+            className="group/link flex items-center gap-1 text-xs font-semibold transition-all"
+            style={{ color: accent }}
           >
-            View leaderboard →
+            View leaderboard
+            <span className="transition-transform group-hover/link:translate-x-0.5">→</span>
           </Link>
 
           {/* Live pulse */}
