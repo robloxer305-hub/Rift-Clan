@@ -7,16 +7,20 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-async function saveImage(value: FormDataEntryValue | null) {
+async function saveImageToBase64(value: FormDataEntryValue | null) {
+  // Accept a pre-cropped base64 data URL (submitted from the banner crop canvas)
+  if (typeof value === "string") {
+    if (!value.startsWith("data:image/")) return undefined; // empty or invalid string
+    return value;
+  }
+
+  // Otherwise handle a raw File upload (profile background)
   if (!(value instanceof File) || value.size === 0) return undefined;
   if (!value.type.startsWith("image/") || value.size > 8 * 1024 * 1024) return undefined;
 
-  const extension = value.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "img";
-  const filename = `${crypto.randomUUID()}.${extension}`;
-  const directory = path.join(process.cwd(), "public", "uploads", "profiles");
-  await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, filename), Buffer.from(await value.arrayBuffer()));
-  return `/uploads/profiles/${filename}`;
+  const bytes = await value.arrayBuffer();
+  const base64 = Buffer.from(bytes).toString("base64");
+  return `data:${value.type};base64,${base64}`;
 }
 
 export async function updateProfileAppearance(formData: FormData) {
@@ -24,8 +28,8 @@ export async function updateProfileAppearance(formData: FormData) {
   if (!session?.user?.id) return;
 
   const [profileBackground, profileBanner] = await Promise.all([
-    saveImage(formData.get("profileBackground")),
-    saveImage(formData.get("profileBanner")),
+    saveImageToBase64(formData.get("profileBackground")),
+    saveImageToBase64(formData.get("profileBanner")),
   ]);
 
   await db.user.update({
